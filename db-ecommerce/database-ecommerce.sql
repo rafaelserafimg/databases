@@ -1,6 +1,8 @@
 CREATE DATABASE db_ecommerce;
 USE db_ecommerce;
 
+SET autocommit = 0;
+
 CREATE TABLE cliente (
   id_cliente INT AUTO_INCREMENT PRIMARY KEY,
   endereco VARCHAR(100)
@@ -158,3 +160,44 @@ SELECT razao_social, descricao
 FROM fornecedor
 JOIN produto_fornecedor ON id_fornecedor = fornecedor_id
 JOIN produto ON produto_id = id_produto;
+
+START TRANSACTION;
+
+INSERT INTO pedido (status, descricao, frete, cliente_id)
+VALUES ('Novo', 'Pedido transacao', 25, 1);
+
+INSERT INTO pagamento (pedido_id, tipo, valor)
+VALUES (LAST_INSERT_ID(), 'pix', 200);
+
+COMMIT;
+
+DELIMITER $$
+
+CREATE PROCEDURE inserir_pedido()
+BEGIN
+  DECLARE erro INT DEFAULT 0;
+
+  DECLARE CONTINUE HANDLER FOR SQLEXCEPTION
+  SET erro = 1;
+
+  START TRANSACTION;
+
+  INSERT INTO pedido (status, descricao, frete, cliente_id)
+  VALUES ('Novo', 'Pedido procedure', 40, 1);
+
+  SAVEPOINT ponto1;
+
+  INSERT INTO pagamento (pedido_id, tipo, valor)
+  VALUES (LAST_INSERT_ID(), 'cartao', 300);
+
+  IF erro = 1 THEN
+    ROLLBACK;
+  ELSE
+    COMMIT;
+  END IF;
+
+END$$
+
+DELIMITER ;
+
+CALL inserir_pedido();
